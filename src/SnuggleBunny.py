@@ -16,7 +16,7 @@ def SnuggleBunny():
     clear()
     parser = argparse.ArgumentParser()
     parser.add_argument("-host", required = True)
-    parser.add_argument("-filename")
+    parser.add_argument("-filename", default = "")
     parser.add_argument("-vuln", action = "store_true")
     args = parser.parse_args()
 
