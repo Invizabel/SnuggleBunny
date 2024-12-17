@@ -16,6 +16,7 @@ def SnuggleBunny():
     clear()
     parser = argparse.ArgumentParser()
     parser.add_argument("-host", required = True)
+    parser.add_argument("-filename")
     parser.add_argument("-vuln", action = "store_true")
     args = parser.parse_args()
 
@@ -29,7 +30,7 @@ def SnuggleBunny():
         
 
     hits = {}
-    mal = ["3DES", "ANY", "DES", "MD5", "NULL", "RC4", "SSL", "TLSv1.0", "TLSv1.1", "TRACE"]
+    mal = ["3DES", "ANY", "DELETE", "DES", "MD5", "NULL", "RC4", "SSL", "TLSv1.0", "TLSv1.1", "TRACE"]
     methods = ["CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "TRACE"]
 
     for host in hosts:
@@ -143,10 +144,16 @@ def SnuggleBunny():
             hits.update({key: temp})
 
         hits = json.dumps(hits, indent = 4)
+        if len(args.filename) > 0:
+            with open(f"{args.filename}.json", "w") as json_file:
+                json_file.write(hits)
         print(f"{RED}{hits}")
                         
     else:
         hits = json.dumps(hits, indent = 4)
+        if len(args.filename) > 0:
+            with open(f"{args.filename}.json", "w") as json_file:
+                    json_file.write(hits)
         print(f"{GREEN}{hits}")
 
 if __name__ == "__main__":
