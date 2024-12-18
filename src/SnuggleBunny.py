@@ -152,32 +152,12 @@ def SnuggleBunny():
             except:
                 pass
 
-            time.sleep(args.delay)
-
-            try:
-                my_request = urllib.request.Request(f"https://api.{host.strip('www')}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-                results.append(f"API FOUND: https://api.{host.strip('www')}")
-
-            except:
-                pass
-
         else:
             try:
                 my_request = urllib.request.Request(f"http://{host}/api", headers = fake_headers, unverifiable = True)
                 my_request = opener.open(my_request, timeout = 10)
                 if my_request.status == 200:
                      results.append(f"API FOUND: {my_request.url}")
-
-            except:
-                pass
-
-            time.sleep(args.delay)
-
-            try:
-                my_request = urllib.request.Request(f"http://api.{host.strip('www')}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-                results.append(f"API FOUND: http://api.{host.strip('www')}")
 
             except:
                 pass
