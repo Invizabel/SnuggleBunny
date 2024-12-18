@@ -20,7 +20,7 @@ fake_headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9
                 "UPGRADE-INSECURE-REQUESTS": "1"}
 
 cookie_jar = http.cookiejar.CookieJar()
-opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar), urllib.request.HTTPRedirectHandler())
 
 def SnuggleBunny():
     clear()
@@ -30,6 +30,8 @@ def SnuggleBunny():
     parser.add_argument("-filename", default = "")
     args = parser.parse_args()
 
+    methods = ["CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "TRACE"]
+    
     hosts = []
     if re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}", args.host):
         for i in list(ipaddress.ip_network(args.host, strict = False).hosts()):
@@ -140,52 +142,6 @@ def SnuggleBunny():
                 pass
 
         time.sleep(args.delay)
-
-        # API
-        if ssl_support:
-            try:
-                my_request = urllib.request.Request(f"https://{host}/api", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-                if my_request.status == 200:
-                    results.append(f"API FOUND: {my_request.url}")
-
-            except:
-                pass
-
-        else:
-            try:
-                my_request = urllib.request.Request(f"http://{host}/api", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-                if my_request.status == 200:
-                     results.append(f"API FOUND: {my_request.url}")
-
-            except:
-                pass
-
-        time.sleep(args.delay)
-        
-        # ADMIN
-        if ssl_support:
-            try:
-                my_request = urllib.request.Request(f"https://{host}/admin", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-                if my_request.status == 200:
-                    results.append(f"ADMIN FOUND: {my_request.url}")
-
-            except:
-                pass
-
-        else:
-            try:
-                my_request = urllib.request.Request(f"http://{host}/admin", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-                if my_request.status == 200:
-                    results.append(f"ADMIN FOUND: {my_request.url}")
-
-            except:
-                pass
-
-        time.sleep(args.delay)
         
         # WORDPRESS
         for i in ["licence.txt", "readme.html", "wp-admin"]:
@@ -209,6 +165,50 @@ def SnuggleBunny():
                 except:
                     pass
 
+        # METHOD
+        for i in methods:
+            time.sleep(args.delay)
+            if ssl_support:
+                try:
+                    my_request = urllib.request.Request(f"https://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = i)
+                    my_request = urllib.request.urlopen(my_request, timeout = 10)
+                    results.append(f"{i} METHOD ALLOWED")
+
+                except:
+                    pass
+
+            else:
+                try:
+                    my_request = urllib.request.Request(f"http://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = i)
+                    my_request = urllib.request.urlopen(my_request, timeout = 10)
+                    results.append(f"{i} METHOD ALLOWED")
+
+                except:
+                    pass
+
+        time.sleep(args.delay)
+
+        # ANY METHOD
+        if ssl_support:
+            try:
+                my_request = urllib.request.Request(f"https://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = "FOOBAR")
+                my_request = urllib.request.urlopen(my_request, timeout = 10)
+                results.append("ANY METHOD ALLOWED")
+
+            except:
+                pass
+
+        else:
+            try:
+                my_request = urllib.request.Request(f"http://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = "FOOBAR")
+                my_request = urllib.request.urlopen(my_request, timeout = 10)
+                results.append("ANY METHOD ALLOWED")
+
+            except:
+                pass
+
+        time.sleep(args.delay)
+            
         if results:
             hits.update({host: results})
 
