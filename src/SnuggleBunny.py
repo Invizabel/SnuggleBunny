@@ -5,7 +5,6 @@ import json
 import re
 import socket
 import ssl
-import time
 import urllib.request
 from clear import clear
 
@@ -26,7 +25,6 @@ def SnuggleBunny():
     clear()
     parser = argparse.ArgumentParser()
     parser.add_argument("-host", required = True)
-    parser.add_argument("-delay", default = 0)
     parser.add_argument("-filename", default = "")
     args = parser.parse_args()
 
@@ -50,9 +48,7 @@ def SnuggleBunny():
         if dns != host:
             results.append(f"DNS: {dns}")
 
-        time.sleep(args.delay)
-
-        # CIPHER        
+        # CIPHER      
         ssl_support = False
         try:
             context = ssl.create_default_context()
@@ -68,61 +64,22 @@ def SnuggleBunny():
         except:
             pass
 
-        time.sleep(args.delay)
-
-        # WEB BANNER
         if ssl_support:
             try:
+                # REQUEST
                 my_request = urllib.request.Request(f"https://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10).headers
-                banner = my_request["server"]
+                my_request = opener.open(my_request, timeout = 10)
+
+                # WEB BANNER
+                banner = my_request.headers["server"]
                 results.append(f"WEB BANNER: {banner}")
 
-            except:
-                pass
-
-        else:
-            try:
-                my_request = urllib.request.Request(f"http://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10).headers
-                banner = my_request["server"]
-                results.append(f"WEB BANNER: {banner}")
-
-            except:
-                pass
-
-        time.sleep(args.delay)
-
-        # BACKEND
-        if ssl_support:
-            try:
-                my_request = urllib.request.Request(f"https://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10).headers
-                backend = my_request["x-powered-by"]
+                # BACKEND
+                backend = my_request.headers["x-powered-by"]
                 if backend:
                     results.append(f"BACKEND: {backend}")
 
-            except:
-                pass
-
-        else:
-            try:
-                my_request = urllib.request.Request(f"http://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10).headers
-                backend = my_request["x-powered-by"]
-                if backend:
-                    results.append(f"BACKEND: {backend}")
-
-            except:
-                pass
-
-        time.sleep(args.delay)
-
-        # DJANGO
-        if ssl_support:
-            try:
-                my_request = urllib.request.Request(f"https://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10).read()
+                # DJANGO
                 for cookie in cookie_jar:
                     if cookie.name == "csrftoken" or cookie.name == "csrf":
                         results.append(f"DJANGO FOUND")
@@ -132,82 +89,26 @@ def SnuggleBunny():
 
         else:
             try:
-                my_request = urllib.request.Request(f"http://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10).read()
+                # REQUEST
+                my_request = urllib.request.Request(f"https://{host}", headers = fake_headers, unverifiable = True)
+                my_request = opener.open(my_request, timeout = 10)
+
+                # WEB BANNER
+                banner = my_request.headers["server"]
+                results.append(f"WEB BANNER: {banner}")
+
+                # BACKEND
+                backend = my_request.headers["x-powered-by"]
+                if backend:
+                    results.append(f"BACKEND: {backend}")
+
+                # DJANGO
                 for cookie in cookie_jar:
                     if cookie.name == "csrftoken" or cookie.name == "csrf":
                         results.append(f"DJANGO FOUND")
 
             except:
                 pass
-
-        time.sleep(args.delay)
-        
-        # WORDPRESS
-        for i in ["licence.txt", "readme.html", "wp-admin"]:
-            if ssl_support:
-                try:
-                    my_request = urllib.request.Request(f"https://{host}/{i}", headers = fake_headers, unverifiable = True)
-                    my_request = opener.open(my_request, timeout = 10)
-                    if my_request.status == 200:
-                        results.append(f"WORDPRESS FOUND: {my_request.url}")
-
-                except:
-                    pass
-
-            else:
-                try:
-                    my_request = urllib.request.Request(f"http://{host}/{i}", headers = fake_headers, unverifiable = True)
-                    my_request = opener.open(my_request, timeout = 10)
-                    if my_request.status == 200:
-                        results.append(f"WORDPRESS FOUND: {my_request.url}")
-
-                except:
-                    pass
-
-        # METHOD
-        for i in methods:
-            time.sleep(args.delay)
-            if ssl_support:
-                try:
-                    my_request = urllib.request.Request(f"https://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = i)
-                    my_request = urllib.request.urlopen(my_request, timeout = 10)
-                    results.append(f"{i} METHOD ALLOWED")
-
-                except:
-                    pass
-
-            else:
-                try:
-                    my_request = urllib.request.Request(f"http://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = i)
-                    my_request = urllib.request.urlopen(my_request, timeout = 10)
-                    results.append(f"{i} METHOD ALLOWED")
-
-                except:
-                    pass
-
-        time.sleep(args.delay)
-
-        # ANY METHOD
-        if ssl_support:
-            try:
-                my_request = urllib.request.Request(f"https://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = "FOOBAR")
-                my_request = urllib.request.urlopen(my_request, timeout = 10)
-                results.append("ANY METHOD ALLOWED")
-
-            except:
-                pass
-
-        else:
-            try:
-                my_request = urllib.request.Request(f"http://{host}", headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0"}, unverifiable = True, method = "FOOBAR")
-                my_request = urllib.request.urlopen(my_request, timeout = 10)
-                results.append("ANY METHOD ALLOWED")
-
-            except:
-                pass
-
-        time.sleep(args.delay)
             
         if results:
             hits.update({host: results})
