@@ -1,11 +1,9 @@
 import argparse
-import http.cookiejar
 import ipaddress
-import json
 import re
 import socket
 import ssl
-import urllib.request
+import time
 from clear import clear
 
 CYAN = "\033[1;36m"
@@ -18,17 +16,12 @@ fake_headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:128.0) Gecko/20100101 Firefox/128.0",
                 "UPGRADE-INSECURE-REQUESTS": "1"}
 
-cookie_jar = http.cookiejar.CookieJar()
-opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar), urllib.request.HTTPRedirectHandler())
-
 def SnuggleBunny():
     clear()
     parser = argparse.ArgumentParser()
     parser.add_argument("-host", required = True)
     parser.add_argument("-filename", default = "")
     args = parser.parse_args()
-
-    methods = ["CONNECT", "DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT", "TRACE"]
     
     hosts = []
     if re.search(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2}", args.host):
@@ -38,88 +31,69 @@ def SnuggleBunny():
     else:
         hosts.append(args.host)
         
-    hits = {}
+    hits = []
     for host in hosts:
-        results = []
         print(f"{CYAN}CHECKING: {host}")
 
         # DNS
         dns = socket.getfqdn(host)
         if dns != host:
-            results.append(f"DNS: {dns}")
+            hits.append(f"DNS: {dns}")
+            print(f"DNS: {dns}")
 
-        # CIPHER      
-        ssl_support = False
+        time.sleep(2.5)
+
+        # CIPHER
         try:
             context = ssl.create_default_context()
+            socket.setdefaulttimeout(10)
             with socket.create_connection((host, 443)) as sock:
-                sock.settimeout(10)
                 with context.wrap_socket(sock, server_hostname = host) as secure_sock:
-                    ssl_support = True
-                    results.append(f"TLS VERSION: {secure_sock.version()}")
                     ciphers = secure_sock.context.get_ciphers()
                     for cipher in ciphers:
-                        results.append(f"CIPHER SUPPORTED: {cipher['name']}")
+                        time.sleep(1)
+                        if "DES" in cipher["name"] or "EXP" in cipher["name"] or "MD5" in cipher["name"] or "NULL" in cipher["name"] or "RC4" in cipher["name"]:
+                            if cipher["strength_bits"] < 128:
+                                hits.append(f"OFFERS WEAK CIPHER and STRENGTH: {cipher['name']}  | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                                print(f"{RED}OFFERS WEAK CIPHER AND STRENGTH: {cipher['name']} | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+
+                            elif cipher["protocol"] != "TLSv1.2" and cipher["protocol"] != "TLSv1.3":
+                                hits.append(f"OFFERS WEAK CIPHER AND PROTOCOL: {cipher['name']} | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                                print(f"{RED}OFFERS WEAK CIPHER AND PROTOCOL: {cipher['name']} | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+
+                            elif cipher["strength_bits"] < 128 and cipher["protocol"] != "TLSv1.2" and cipher["protocol"] != "TLSv1.3":
+                                hits.append(f"OFFERS WEAK CIPHER, PROTOCOL, AND STRENGTH | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                                print(f"{RED}OFFERS WEAK CIPHER, PROTOCOL, AND STRENGTH | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                                
+                            else:
+                                hits.append(f"OFFERS WEAK CIPHER: {cipher['name']} | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                                print(f"{RED}OFFERS WEAK CIPHER: {cipher['name']} | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+
+                        elif cipher["strength_bits"] < 128:
+                            hits.append(f"OFFERS WEAK STRENGTH: {cipher['name']} | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                            print(f"{RED}OFFERS WEAK STRENGTH: {cipher['name']} | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+
+                        elif cipher["protocol"] != "TLSv1.2" and cipher["protocol"] != "TLSv1.3":
+                            hits.append(f"OFFERS WEAK PROTOCOL | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                            print(f"{RED}OFFERS WEAK PROTOCOL | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+
+                        elif cipher["strength_bits"] < 128 and cipher["protocol"] != "TLSv1.2" and cipher["protocol"] != "TLSv1.3":
+                            hits.append(f"OFFERS WEAK PROTOCOL AND STRENGTH | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                            print(f"{RED}OFFERS WEAK PROTOCOL AND STRENGTH | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+
+                        else:
+                            hits.append(f"OFFERS STRONG CIPHER, PROTOCOL, AND STRENGTH  | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
+                            print(f"{GREEN}OFFERS STRONG CIPHER, PROTOCOL, AND STRENGTH | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
 
         except:
             pass
 
-        if ssl_support:
-            try:
-                # REQUEST
-                my_request = urllib.request.Request(f"https://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-
-                # WEB BANNER
-                banner = my_request.headers["server"]
-                results.append(f"WEB BANNER: {banner}")
-
-                # BACKEND
-                backend = my_request.headers["x-powered-by"]
-                if backend:
-                    results.append(f"BACKEND: {backend}")
-
-                # DJANGO
-                for cookie in cookie_jar:
-                    if cookie.name == "csrftoken" or cookie.name == "csrf":
-                        results.append(f"DJANGO FOUND")
-
-            except:
-                pass
-
-        else:
-            try:
-                # REQUEST
-                my_request = urllib.request.Request(f"https://{host}", headers = fake_headers, unverifiable = True)
-                my_request = opener.open(my_request, timeout = 10)
-
-                # WEB BANNER
-                banner = my_request.headers["server"]
-                results.append(f"WEB BANNER: {banner}")
-
-                # BACKEND
-                backend = my_request.headers["x-powered-by"]
-                if backend:
-                    results.append(f"BACKEND: {backend}")
-
-                # DJANGO
-                for cookie in cookie_jar:
-                    if cookie.name == "csrftoken" or cookie.name == "csrf":
-                        results.append(f"DJANGO FOUND")
-
-            except:
-                pass
-            
-        if results:
-            hits.update({host: results})
-
-    clear()
-    hits = json.dumps(hits, indent = 4)
     if len(args.filename) > 0:
-        with open(f"{args.filename}.json", "w") as json_file:
-                json_file.write(hits)
+        with open(f"{args.filename}.txt", "w") as file:
+            for hit in hits:
+                file.write(hit)
 
-    print(f"{GREEN}{hits}")
+    print(f"{CYAN}DONE!")
 
 if __name__ == "__main__":
     SnuggleBunny()
