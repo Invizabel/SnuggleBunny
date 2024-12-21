@@ -20,6 +20,7 @@ def SnuggleBunny():
     clear()
     parser = argparse.ArgumentParser()
     parser.add_argument("-host", required = True)
+    parser.add_argument("-port", default = 443)
     parser.add_argument("-filename", default = "")
     args = parser.parse_args()
     
@@ -46,8 +47,10 @@ def SnuggleBunny():
         # CIPHER
         try:
             context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
             socket.setdefaulttimeout(10)
-            with socket.create_connection((host, 443)) as sock:
+            with socket.create_connection((host, args.port)) as sock:
                 with context.wrap_socket(sock, server_hostname = host) as secure_sock:
                     ciphers = secure_sock.context.get_ciphers()
                     for cipher in ciphers:
@@ -85,8 +88,8 @@ def SnuggleBunny():
                             hits.append(f"OFFERS STRONG CIPHER, PROTOCOL, AND STRENGTH  | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
                             print(f"{GREEN}OFFERS STRONG CIPHER, PROTOCOL, AND STRENGTH | NAME = {cipher['name']} | PROTOCOL = {cipher['protocol']} | STRENGTH = {cipher['strength_bits']} bits")
 
-        except:
-            pass
+        except Exception as ERROR:
+            print(f"{RED}ERROR! {ERROR}")
 
     if len(args.filename) > 0:
         with open(f"{args.filename}.txt", "w") as file:
